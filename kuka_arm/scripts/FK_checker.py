@@ -48,7 +48,7 @@ class fk_checker(object):
              'alpha5': -np.pi/2, 'a5':      0, 'd6':     0, 'q6':           joint_values[5],
              'alpha6':        0, 'a6':      0, 'd7': 0.453, 'q7':           joint_values[6]}
         
-        # Define Modified DH Transformation matrix
+        # Transformations
         T01 = homo_transformation(s['alpha0'], s['a0'], s['q1'], s['d1'])
         T12 = homo_transformation(s['alpha1'], s['a1'], s['q2'], s['d2'])
         T23 = homo_transformation(s['alpha2'], s['a2'], s['q3'], s['d3'])
@@ -57,7 +57,7 @@ class fk_checker(object):
         T56 = homo_transformation(s['alpha5'], s['a5'], s['q6'], s['d6'])
         T6G = homo_transformation(s['alpha6'], s['a6'], s['q7'], s['d7'])
 
-        # Create individual transformation matrices
+        # base to gripper transformation
         T02 = np.dot(T01, T12)
         T03 = np.dot(T02, T23)
         T04 = np.dot(T03, T34)
@@ -77,16 +77,19 @@ class fk_checker(object):
     # joint state callback
     def joint_states_callback(self,joint_state):
 
+        ### debugging purpose
         transform = TransformStamped()
         transform.header.stamp = rospy.Time.now()
-        transform.header.frame_id = "base_link"
-        transform.child_frame_id = "4"
+        transform.header.frame_id = "link__2"
+        transform.child_frame_id = "5"
 
         transform4_base = TransformStamped()
         transform4_base.header.stamp = rospy.Time.now()
         transform4_base.header.frame_id = "base_link"
-        transform4_base.child_frame_id = "ee"
+        transform4_base.child_frame_id = "link__2"
         
+
+        ## DH parameters
         s = {'alpha0':        0, 'a0':     0 , 'd1':  0.75, 'q1':           joint_state.position[2],
              'alpha1': -np.pi/2, 'a1':   0.35, 'd2':     0, 'q2': joint_state.position[3] - np.pi/2,
              'alpha2':        0, 'a2':   1.25, 'd3':     0, 'q3':           joint_state.position[4],
@@ -94,8 +97,8 @@ class fk_checker(object):
              'alpha4':  np.pi/2, 'a4':      0, 'd5':     0, 'q5':           joint_state.position[6],
              'alpha5': -np.pi/2, 'a5':      0, 'd6':     0, 'q6':           joint_state.position[7],
              'alpha6':        0, 'a6':      0, 'd7': 0.453, 'q7':                                 0 }
-        
-        # Define Modified DH Transformation matrix
+
+        # transformations
         _T01 = homo_transformation(s['alpha0'], s['a0'], s['q1'], s['d1'])
         _T12 = homo_transformation(s['alpha1'], s['a1'], s['q2'], s['d2'])
         _T23 = homo_transformation(s['alpha2'], s['a2'], s['q3'], s['d3'])
@@ -104,7 +107,6 @@ class fk_checker(object):
         _T56 = homo_transformation(s['alpha5'], s['a5'], s['q6'], s['d6'])
         _T6G = homo_transformation(s['alpha6'], s['a6'], s['q7'], s['d7'])
 
-        # Create individual transformation matrices
         _T02 = np.dot(_T01, _T12)
         _T03 = np.dot(_T02, _T23)
         _T04 = np.dot(_T03, _T34)
@@ -116,8 +118,7 @@ class fk_checker(object):
         TC1 = tf.transformations.quaternion_matrix(tf.transformations.quaternion_from_euler(0.0, 0.0, np.pi))
         TC2 = tf.transformations.quaternion_matrix(tf.transformations.quaternion_from_euler(0.0, -np.pi/2, 0.0))
         TC = np.dot(TC1,TC2)
-        #P = _T0G[:3,3]
-        #R = _T0G[:3, :3]
+        ####### input of pick and place project ###############
         T0G = np.dot(_T0G,TC)
         ##################################################
 
@@ -137,15 +138,12 @@ class fk_checker(object):
         T02 = np.dot(T01, T12)
         P02 = T02[:3, 3]
         R02 = T02[:3,:3]
-        #transform.transform = message_from_transform(T02)
-        #self.tf_broadcaster.sendTransform(transform)
         
         T20 = np.linalg.inv(T02)
         R20 = np.linalg.inv(R02)
         
         # base_link
         P25 = P05 - P02
-        # link_4
         P25_ = np.dot(R20,P25)
 
         beta1 = np.arctan2(P25_[0],P25_[1])
@@ -162,8 +160,6 @@ class fk_checker(object):
         theta3 = np.pi/2 - (phi + alpha)
 
         ####### theta 4 #########
-        #P = _T0G[:3,3]
-        #R = _T0G[:3, :3]
         T01 = homo_transformation(s['alpha0'], s['a0'], theta1, s['d1'])
         T12 = homo_transformation(s['alpha1'], s['a1'], theta2 - np.pi/2, s['d2'])
         T23 = homo_transformation(s['alpha2'], s['a2'], theta3, s['d3'])
@@ -171,29 +167,33 @@ class fk_checker(object):
         T03 = np.dot(T02, T23)
         R03 = T03[:3, :3]
         R36 = np.dot(np.linalg.inv(R03),R)
-        #print(tf.transformations.euler_from_matrix(R36))
-        ##print(R36,R36[2,2],R36[0,2])
+
         theta4 = np.arctan2(R36[2,2],-R36[0,2]) 
         ######## theta 5 ######
         theta5 = np.arctan2(np.sqrt(R36[1,0]**2 + R36[1,1]**2),R36[1,2])
         ######## theta 6 ########3
-        #_ , __, yaw = tf.transformations.euler_from_matrix(R36)
         theta6 = np.arctan2(-R36[1,1],R36[1,0])
+        
+        if np.sin(theta5) < 0 :
+            theta4 = np.arctan2(-R36[2,2],R36[0,2]) 
+            theta6 = np.arctan2(R36[1,1],-R36[1,0])
 
         if np.allclose(theta5, 0):
             theta4 = 0
             theta6 = np.arctan2(-R36[0,1],-R36[2,1])
 
-        
-        #print(P24_,P24)
         theta = [theta1, theta2, theta3, theta4, theta5, theta6, 0]
         print(np.round(theta,2))
-        #print(tf.transformations.euler_from_matrix(R36))
 
-        transform4_base.transform = message_from_transform(self.FK_calculator(theta))
+        T01 = homo_transformation(s['alpha0'], s['a0'], theta1, s['d1'])
+        T12 = homo_transformation(s['alpha1'], s['a1'], - np.pi/2, s['d2'])
+        
+        T02 = np.dot(T01, T12)
+
+        transform4_base.transform = message_from_transform(T02)
         self.tf_broadcaster.sendTransform(transform4_base)
         
-        transform.transform = message_from_transform(T02)
+        transform.transform = message_from_transform(tf.transformations.translation_matrix(P25_))
         self.tf_broadcaster.sendTransform(transform)
 
 if __name__ == "__main__":
