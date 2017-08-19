@@ -80,13 +80,13 @@ class fk_checker(object):
         ### debugging purpose
         transform = TransformStamped()
         transform.header.stamp = rospy.Time.now()
-        transform.header.frame_id = "link__2"
+        transform.header.frame_id = "base_link"
         transform.child_frame_id = "5"
 
         transform4_base = TransformStamped()
         transform4_base.header.stamp = rospy.Time.now()
         transform4_base.header.frame_id = "base_link"
-        transform4_base.child_frame_id = "link__2"
+        transform4_base.child_frame_id = "ee"
 
         transform1 = TransformStamped()
         transform1.header.stamp = rospy.Time.now()
@@ -95,12 +95,20 @@ class fk_checker(object):
         
 
         ## DH parameters
-        s = {'alpha0':        0, 'a0':     0 , 'd1':  0.75, 'q1':           joint_state.position[2],
-             'alpha1': -np.pi/2, 'a1':   0.35, 'd2':     0, 'q2': joint_state.position[3] - np.pi/2,
-             'alpha2':        0, 'a2':   1.25, 'd3':     0, 'q3':           joint_state.position[4],
-             'alpha3': -np.pi/2, 'a3': -0.054, 'd4':   1.5, 'q4':           joint_state.position[5],
-             'alpha4':  np.pi/2, 'a4':      0, 'd5':     0, 'q5':           joint_state.position[6],
-             'alpha5': -np.pi/2, 'a5':      0, 'd6':     0, 'q6':           joint_state.position[7],
+        # s = {'alpha0':        0, 'a0':     0 , 'd1':  0.75, 'q1':           joint_state.position[2],
+        #      'alpha1': -np.pi/2, 'a1':   0.35, 'd2':     0, 'q2': joint_state.position[3] - np.pi/2,
+        #      'alpha2':        0, 'a2':   1.25, 'd3':     0, 'q3':           joint_state.position[4],
+        #      'alpha3': -np.pi/2, 'a3': -0.054, 'd4':   1.5, 'q4':           joint_state.position[5],
+        #      'alpha4':  np.pi/2, 'a4':      0, 'd5':     0, 'q5':           joint_state.position[6],
+        #      'alpha5': -np.pi/2, 'a5':      0, 'd6':     0, 'q6':           joint_state.position[7],
+        #      'alpha6':        0, 'a6':      0, 'd7': 0.453, 'q7':                                 0 }
+        # ## DH parameters
+        s = {'alpha0':        0, 'a0':     0 , 'd1':  0.75, 'q1':           joint_state.position[0],
+             'alpha1': -np.pi/2, 'a1':   0.35, 'd2':     0, 'q2': joint_state.position[1] - np.pi/2,
+             'alpha2':        0, 'a2':   1.25, 'd3':     0, 'q3':           joint_state.position[2],
+             'alpha3': -np.pi/2, 'a3': -0.054, 'd4':   1.5, 'q4':           joint_state.position[3],
+             'alpha4':  np.pi/2, 'a4':      0, 'd5':     0, 'q5':           joint_state.position[4],
+             'alpha5': -np.pi/2, 'a5':      0, 'd6':     0, 'q6':           joint_state.position[5],
              'alpha6':        0, 'a6':      0, 'd7': 0.453, 'q7':                                 0 }
 
         # transformations
@@ -129,10 +137,12 @@ class fk_checker(object):
 
         T0G_dh = np.dot(T0G,np.linalg.inv(TC))
         P = T0G_dh[:3,3]
+        #P = np.array([-0.209973197041, 2.49999627205, 1.60003023044])
         R = T0G_dh[:3, :3]
 
         ############# theta 1 #############
         P05 = P - s['d7']*R[:,2]
+        #print(T0G[0:3,0])
         theta1 = np.arctan2(P05[1],P05[0])
 
         
@@ -172,7 +182,7 @@ class fk_checker(object):
         T03 = np.dot(T02, T23)
         R03 = T03[:3, :3]
         R36 = np.dot(np.linalg.inv(R03),R)
-
+        print(np.linalg.inv(R03))
         theta4 = np.arctan2(R36[2,2],-R36[0,2]) 
         ######## theta 5 ######
         theta5 = np.arctan2(np.sqrt(R36[1,0]**2 + R36[1,1]**2),R36[1,2])
@@ -188,21 +198,25 @@ class fk_checker(object):
             theta6 = np.arctan2(-R36[0,1],-R36[2,1])
 
         theta = [theta1, theta2, theta3, theta4, theta5, theta6, 0]
+        #theta = [theta1, theta2, theta3, roll, pitch, yaw, 0]
         print(np.round(theta,2))
 
         T01 = homo_transformation(s['alpha0'], s['a0'], theta1, s['d1'])
         T12 = homo_transformation(s['alpha1'], s['a1'], - np.pi/2, s['d2'])
         
         T02 = np.dot(T01, T12)
-
-        transform4_base.transform = message_from_transform(T02)
+        #roll, pitch, yaw = tf.transformations.euler_from_matrix(R36,'ryxz')
+        # pitch += np.pi/2
+        # print([roll, pitch, yaw])
+        transform4_base.transform = message_from_transform(T0G)
+        #transform4_base.transform = message_from_transform(self.FK_calculator(theta)
         self.tf_broadcaster.sendTransform(transform4_base)
         
-        transform1.transform = message_from_transform(tf.transformations.translation_matrix(P05))
-        self.tf_broadcaster.sendTransform(transform1)
-        ############################
+        # transform1.transform = message_from_transform(tf.transformations.translation_matrix(P05))
+        # self.tf_broadcaster.sendTransform(transform1)
+        # ############################
 
-        transform.transform = message_from_transform(tf.transformations.translation_matrix(P25_))
+        transform.transform = message_from_transform(tf.transformations.translation_matrix(P05))
         self.tf_broadcaster.sendTransform(transform)
 
 if __name__ == "__main__":
