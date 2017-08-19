@@ -216,8 +216,6 @@ class ik_calculator(object):
             rospy.loginfo("length of Joint Trajectory List: %s" % len(joint_trajectory_list))
             return CalculateIKResponse(joint_trajectory_list)
 
-
-
 if __name__ == "__main__":
     rospy.init_node('IK_server')
     ik_cal = ik_calculator()

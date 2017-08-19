@@ -190,6 +190,17 @@ using cosine law
 
 phi = arccos((a2^2 + d^2 - norm(P25))/(2*a2*d)), d and a2 are as theta2
 
+Links | alpha(i-1) | a(i-1) | d(i-1) | theta(i)
+--- | --- | --- | --- | ---
+0->1 | 0 | 0 | L1 | qi
+1->2 | - pi/2 | L2 | 0 | -pi/2 + q2
+2->3 | 0 | 0 | 0 | 0
+3->4 |  0 | 0 | 0 | 0
+4->5 | 0 | 0 | 0 | 0
+5->6 | 0 | 0 | 0 | 0
+6->EE | 0 | 0 | 0 | 0
+
+
 alpha = arctan2(0.054, 0.96)
 
 ## 4. theta 4,5,6
