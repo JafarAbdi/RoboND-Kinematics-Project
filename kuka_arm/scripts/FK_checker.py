@@ -87,6 +87,11 @@ class fk_checker(object):
         transform4_base.header.stamp = rospy.Time.now()
         transform4_base.header.frame_id = "base_link"
         transform4_base.child_frame_id = "link__2"
+
+        transform1 = TransformStamped()
+        transform1.header.stamp = rospy.Time.now()
+        transform1.header.frame_id = "base_link"
+        transform1.child_frame_id = "_5"
         
 
         ## DH parameters
@@ -193,6 +198,10 @@ class fk_checker(object):
         transform4_base.transform = message_from_transform(T02)
         self.tf_broadcaster.sendTransform(transform4_base)
         
+        transform1.transform = message_from_transform(tf.transformations.translation_matrix(P05))
+        self.tf_broadcaster.sendTransform(transform1)
+        ############################
+
         transform.transform = message_from_transform(tf.transformations.translation_matrix(P25_))
         self.tf_broadcaster.sendTransform(transform)
 
